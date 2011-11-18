@@ -1,7 +1,7 @@
 Database.com FDW for PostgreSQL
 ===============================
 
-This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. Name LIKE 'P%') are passed to database.com to minimize the amount of data on the wire.
+This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. `Name LIKE 'P%'`) are passed to database.com to minimize the amount of data on the wire.
 
 This first drop is the result of approx six hours work, and should be considered a prototype, not for production deployment!
 
