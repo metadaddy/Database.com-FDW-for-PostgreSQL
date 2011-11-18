@@ -16,11 +16,11 @@ Installation
 1. [Create a Remote Access Application](http://wiki.developerforce.com/page/Getting_Started_with_the_Force.com_REST_API#Setup), since you will need a client ID and client secret so that that the FDW can login via OAuth and use the REST API.
 2. [Install Multicorn](http://multicorn.org/#installation)
 3. Build the FDW module:
-   ```
-   $ cd Database.com-FDW-for-PostgreSQL
-   $ python setup.py sdist
-   $ sudo python setup.py install
-   ```
+ ```
+ $ cd Database.com-FDW-for-PostgreSQL
+ $ python setup.py sdist
+ $ sudo python setup.py install
+ ```
 4. In the PostgreSQL client, create the extension and foreign server:
    ```
    CREATE EXTENSION multicorn;
