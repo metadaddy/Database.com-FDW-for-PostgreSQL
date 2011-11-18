@@ -1,7 +1,7 @@
 Database.com FDW for PostgreSQL
 ===============================
 
-This Python module implements the multicorn.ForeignDataWrapper interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com.
+This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com.
 
 Pre-requisites
 --------------
@@ -21,7 +21,7 @@ Installation
         $ python setup.py sdist
         $ sudo python setup.py install
 
-4. In the PostgreSQL client, create the extension and foreign server:
+4. In the PostgreSQL client, create an extension and foreign server:
 
 
         CREATE EXTENSION multicorn;
