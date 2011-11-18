@@ -72,3 +72,30 @@ Installation
         -------
              3
         (1 row)s
+        postgres=# CREATE TABLE example (
+        postgres(#     email varchar PRIMARY KEY,
+        postgres(#     favorite_color varchar NOT NULL
+        postgres(# );
+        NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "example_pkey" for table "example"
+        CREATE TABLE
+        postgres=# INSERT INTO example VALUES('rose@edge.com', 'Red');
+        INSERT 0 1
+        postgres=# INSERT INTO example VALUES('jane_gray@uoa.edu', 'Green');
+        INSERT 0 1
+        postgres=# INSERT INTO example VALUES('agreen@uog.com', 'Blue');
+        INSERT 0 1
+        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts."Email";
+        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
+         favorite_color 
+        ----------------
+         Red
+         Green
+         Blue
+        (3 rows)
+        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts."Email" WHERE contacts."FirstName" = 'Rose';
+        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact WHERE FirstName = 'Rose' 
+         favorite_color 
+        ----------------
+         Red
+        (1 row)
+
