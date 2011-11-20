@@ -48,6 +48,8 @@ Installation
 
 6. Query the foreign table as if it were any other table. You will see some diagnostics as the FDW interacts with database.com/Force.com. Note that you will have to quote field names, just as you did when creating the table. Here are some examples:
 
+    `SELECT *`
+
         SELECT * FROM contacts;
         NOTICE:  Logged in to https://login.salesforce.com as pat@superpat.com
         NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
@@ -60,6 +62,9 @@ Installation
          Andy      | Young                               | a_young@dickenson.com
          Tim       | Barr                                | barr_tim@grandhotels.com
         ...etc...
+
+    `SELECT` a column with a condition
+
         postgres=# SELECT "Email" FROM contacts WHERE "LastName" LIKE 'G%';
         NOTICE:  SOQL query is SELECT LastName,Email FROM Contact WHERE LastName LIKE 'G%' 
                Email       
@@ -68,12 +73,18 @@ Installation
          jane_gray@uoa.edu
          agreen@uog.com
         (3 rows)
+
+    Aggregator
+
         postgres=# SELECT COUNT(*) FROM contacts WHERE "LastName" LIKE 'G%';
         NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact WHERE LastName LIKE 'G%' 
          count 
         -------
              3
         (1 row)s
+
+    `JOIN`
+
         postgres=# CREATE TABLE example (
         postgres(#     email varchar PRIMARY KEY,
         postgres(#     favorite_color varchar NOT NULL
@@ -100,4 +111,20 @@ Installation
         ----------------
          Red
         (1 row)
+
+    `EXPLAIN`
+
+        postgres=# explain analyze select * from contacts order by "LastName" asc limit 3;
+        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
+                                                                   QUERY PLAN                                                           
+        --------------------------------------------------------------------------------------------------------------------------------
+         Limit  (cost=129263.11..129263.12 rows=3 width=96) (actual time=431.883..431.887 rows=3 loops=1)
+           ->  Sort  (cost=129263.11..154263.11 rows=9999999 width=96) (actual time=431.880..431.880 rows=3 loops=1)
+                 Sort Key: "LastName"
+                 Sort Method: top-N heapsort  Memory: 17kB
+                 ->  Foreign Scan on contacts  (cost=10.00..15.00 rows=9999999 width=96) (actual time=429.914..431.726 rows=69 loops=1)
+                       Foreign multicorn: multicorn
+                       Foreign multicorn cost: 10
+         Total runtime: 431.941 ms
+        (8 rows)
 
