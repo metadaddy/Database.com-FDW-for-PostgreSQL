@@ -112,6 +112,18 @@ Installation
          Red
         (1 row)
 
+    Token refresh
+
+        postgres=# SELECT DISTINCT "Email" FROM contacts LIMIT 1;
+        NOTICE:  SOQL query is SELECT Email FROM Contact
+        NOTICE:  Invalid token 00D50000000IZ3Z!AQ0AQBwEiMxpN5VhLER2PKlifISWxln8ztl2V0cw3BPUAf3IxiD6ZG8Ei5PBcJoCKHDZRmp8lGnFDPQl7kaYgKL73vHHkqbG - trying refresh
+        NOTICE:  Logged in to https://login.salesforce.com as pat@superpat.com
+        NOTICE:  SOQL query is SELECT Email FROM Contact
+                 Email          
+        ------------------------
+         jrogers@burlington.com
+        (1 row)
+
     `EXPLAIN`
 
         postgres=# explain analyze select * from contacts order by "LastName" asc limit 3;
