@@ -28,6 +28,11 @@ Installation
         $ python setup.py sdist
         $ sudo python setup.py install
 
+    or, with easy_install:
+
+        $ cd Database.com-FDW-for-PostgreSQL
+        $ sudo easy_install .
+
 6. In the PostgreSQL client, create an extension and foreign server:
 
 
