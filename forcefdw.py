@@ -1,10 +1,98 @@
 from multicorn import ForeignDataWrapper
 from multicorn.utils import log_to_postgres, ERROR, DEBUG
+from yajl import *
+
+from Queue import Queue
+from threading import Thread
 
 import urllib
 import urllib2
 import json
 import pprint
+
+# ContentHandler implements a simple state machine to parse the records from 
+# the incoming JSON stream, adding them to the queue as maps of column name
+# to column value. We skip over any record properties that are not simple 
+# values (e.g. attributes, which is an object containing the record's type
+# and URL)/
+class ContentHandler(YajlContentHandler):
+    _column = ''
+
+    # States
+    INIT = 0
+    IN_OBJECT = 1
+    SEEN_RECORDS = 2
+    IN_ARRAY = 3 
+    IN_RECORD = 4
+    SEEN_KEY = 5
+
+    _state = INIT
+
+    _depth = 0
+
+    def __init__(self, queue):
+        self._queue = queue
+
+    def handle_value(self, ctx, val):
+        if self._state == ContentHandler.SEEN_KEY and self._depth == 0:
+            self._state = ContentHandler.IN_RECORD
+            self._record[self._column] = val
+
+    def yajl_null(self, ctx):
+        self.handle_value(ctx, None)
+
+    def yajl_boolean(self, ctx, boolVal):
+        self.handle_value(ctx, boolVal)
+
+    def yajl_integer(self, ctx, integerVal):
+        self.handle_value(ctx, integerVal)
+
+    def yajl_double(self, ctx, doubleVal):
+        self.handle_value(ctx, doubleVal)
+
+    def yajl_string(self, ctx, stringVal):
+        self.handle_value(ctx, stringVal)
+
+    def yajl_start_map(self, ctx):
+        if self._state == ContentHandler.SEEN_KEY:
+            self._depth += 1
+        elif self._state == ContentHandler.IN_ARRAY:
+            self._state = ContentHandler.IN_RECORD
+            self._record = {}
+        elif self._state == ContentHandler.INIT:
+            self._state = ContentHandler.IN_OBJECT
+
+    def yajl_map_key(self, ctx, stringVal):
+        if self._state == ContentHandler.IN_RECORD:
+            self._state = ContentHandler.SEEN_KEY
+            self._column = stringVal
+        elif self._state == ContentHandler.IN_OBJECT and stringVal == 'records':
+            self._state = ContentHandler.SEEN_RECORDS
+
+    def yajl_end_map(self, ctx):
+        if self._state == ContentHandler.SEEN_KEY:
+            self._depth -= 1
+            if self._depth == 0:
+                self._state = ContentHandler.IN_RECORD
+        elif self._state == ContentHandler.IN_RECORD:
+            self._state = ContentHandler.IN_ARRAY
+            self._queue.put(self._record)
+        elif self._state == ContentHandler.IN_OBJECT:
+            self._state = ContentHandler.INIT
+
+    def yajl_start_array(self, ctx):
+        if self._state == ContentHandler.SEEN_RECORDS:
+            self._state = ContentHandler.IN_ARRAY
+
+    def yajl_end_array(self, ctx):
+        if self._state == ContentHandler.IN_ARRAY:
+            self._state = ContentHandler.IN_OBJECT
+
+# Parse the given stream to a queue
+def parseToQueue(stream, queue):
+    parser = YajlParser(ContentHandler(queue))
+    parser.parse(stream)
+    queue.put(None)
 
 class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
 
@@ -37,7 +125,6 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         self.oauth = self.get_token()
 
     def get_token(self):
-
         # Do OAuth username/password
         token_url = '%s/services/oauth2/token' % self.login_server
 
@@ -67,9 +154,9 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
                                 'Check the login_server')
             else:
                 log_to_postgres('Unknown error %s' % e, ERROR)
-	log_to_postgres('Got token %s' % data, DEBUG)
+        log_to_postgres('Got token %s' % data, DEBUG)
         oauth = json.loads(data)
-	log_to_postgres('Logged in to %s as %s' % (self.login_server, self.username))
+        log_to_postgres('Logged in to %s as %s' % (self.login_server, self.username))
 
         return oauth     
 
@@ -106,8 +193,11 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         }
 
         req = urllib2.Request(query_url, None, headers)
+
+        queue = Queue()
+
         try:
-            data = urllib2.urlopen(req).read()
+            stream = urllib2.urlopen(req);
         except urllib2.URLError, e:
             if hasattr(e, 'code'):
                 if e.code == 401 and retry:
@@ -124,10 +214,11 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
                                 (token_url, e.reason[0], e.reason[1]), ERROR)
             else:
                 log_to_postgres('Unknown error %s' % e, ERROR)
-	log_to_postgres('Raw response is %s' % data, DEBUG)
-        result = json.loads(data)
-        for record in result['records']:
-            line = {}
-            for column_name in list(columns):
-                line[column_name] = record[column_name]
-            yield line
+        t = Thread(target=parseToQueue, args=(stream, queue))        
+        t.daemon = True
+        t.start()
+        item = queue.get()
+        while item is not None:
+            yield item
+            queue.task_done()
+            item = queue.get()

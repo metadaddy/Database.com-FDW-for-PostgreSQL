@@ -3,7 +3,7 @@ Database.com FDW for PostgreSQL
 
 This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. `Name LIKE 'P%'`) are passed to database.com to minimize the amount of data on the wire.
 
-This first drop is the result of approx six hours work, and should be considered a prototype, not for production deployment!
+This first drop is the result of approx ten hours work, and should be considered a prototype, not for production deployment!
 
 Pre-requisites
 --------------
@@ -11,19 +11,24 @@ Pre-requisites
 * [PostgreSQL 9.1+](http://www.postgresql.org/)
 * [Python](http://python.org/)
 * [Multicorn](http://multicorn.org)
+* [yajl-py](http://pykler.github.com/yajl-py/)
+* [YAJL](http://lloyd.github.com/yajl/)
 
 Installation
 ------------
 
 1. [Create a Remote Access Application](http://wiki.developerforce.com/page/Getting_Started_with_the_Force.com_REST_API#Setup), since you will need a client ID and client secret so that that the FDW can login via OAuth and use the REST API.
 2. [Install Multicorn](http://multicorn.org/#installation)
-3. Build the FDW module:
+3. [Build and install YAJL](http://lloyd.github.com/yajl/)
+4. [Build and install yajl-py](http://pykler.github.com/yajl-py/)
+
+5. Build the FDW module:
 
         $ cd Database.com-FDW-for-PostgreSQL
         $ python setup.py sdist
         $ sudo python setup.py install
 
-4. In the PostgreSQL client, create an extension and foreign server:
+6. In the PostgreSQL client, create an extension and foreign server:
 
 
         CREATE EXTENSION multicorn;
@@ -32,7 +37,7 @@ Installation
             wrapper 'forcefdw.DatabaseDotComForeignDataWrapper'
         );
 
-5. Create a foreign table. You can use any subset of fields from the sobject, but note that field names are case sensitive and must be quoted in the DDL:
+7. Create a foreign table. You can use any subset of fields from the sobject, but note that field names are case sensitive and must be quoted in the DDL:
 
         CREATE FOREIGN TABLE contacts (
             "FirstName" character varying,
@@ -46,7 +51,7 @@ Installation
             password '********'
         );
 
-6. Query the foreign table as if it were any other table. You will see some diagnostics as the FDW interacts with database.com/Force.com. Note that you will have to quote field names, just as you did when creating the table. Here are some examples:
+8. Query the foreign table as if it were any other table. You will see some diagnostics as the FDW interacts with database.com/Force.com. Note that you will have to quote field names, just as you did when creating the table. Here are some examples:
 
     `SELECT *`
 
