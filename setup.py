@@ -1,6 +1,6 @@
 from distutils.core import setup
 setup(name='ForceFDW',
-      version='0.0.2',
+      version='0.0.3',
       description='Database.com FDW for PostgreSQL',
       author='Pat Patterson',
       author_email='ppatterson@salesforce.com',

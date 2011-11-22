@@ -3,7 +3,7 @@ Database.com FDW for PostgreSQL
 
 This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. `Name LIKE 'P%'`) are passed to database.com to minimize the amount of data on the wire.
 
-This first drop is the result of approx ten hours work, and should be considered a prototype, not for production deployment!
+Version 0.0.3 removes the requirement for column names to be a case-sensitive match for the database.com field names.
 
 Pre-requisites
 --------------
@@ -36,12 +36,12 @@ Installation
             wrapper 'forcefdw.DatabaseDotComForeignDataWrapper'
         );
 
-7. Create a foreign table. You can use any subset of fields from the sobject, but note that field names are case sensitive and must be quoted in the DDL:
+7. Create a foreign table. You can use any subset of fields from the sobject, and column/field name matching is not case-sensitive:
 
         CREATE FOREIGN TABLE contacts (
-            "FirstName" character varying,
-            "LastName" character varying,
-            "Email" character varying
+            firstname character varying,
+            lastname character varying,
+            email character varying
         ) SERVER multicorn_force OPTIONS (
             obj_type 'Contact',
             client_id 'CONSUMER_KEY_FROM_REMOTE_ACCESS_APP,
@@ -50,14 +50,14 @@ Installation
             password '********'
         );
 
-8. Query the foreign table as if it were any other table. You will see some diagnostics as the FDW interacts with database.com/Force.com. Note that you will have to quote field names, just as you did when creating the table. Here are some examples:
+8. Query the foreign table as if it were any other table. You will see some diagnostics as the FDW interacts with database.com/Force.com. Here are some examples:
 
     `SELECT *`
 
         SELECT * FROM contacts;
         NOTICE:  Logged in to https://login.salesforce.com as pat@superpat.com
-        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
-         FirstName |              LastName               |           Email           
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact
+         firstname |              lastname               |           email           
         -----------+-------------------------------------+---------------------------
          Rose      | Gonzalez                            | rose@edge.com
          Sean      | Forbes                              | sean@edge.com
@@ -69,9 +69,9 @@ Installation
 
     `SELECT` a column with a condition
 
-        postgres=# SELECT "Email" FROM contacts WHERE "LastName" LIKE 'G%';
-        NOTICE:  SOQL query is SELECT LastName,Email FROM Contact WHERE LastName LIKE 'G%' 
-               Email       
+        postgres=# SELECT email FROM contacts WHERE lastname LIKE 'G%';
+        NOTICE:  SOQL query is SELECT lastname,email FROM Contact WHERE lastname LIKE 'G%' 
+               email       
         -------------------
          rose@edge.com
          jane_gray@uoa.edu
@@ -80,8 +80,8 @@ Installation
 
     Aggregator
 
-        postgres=# SELECT COUNT(*) FROM contacts WHERE "LastName" LIKE 'G%';
-        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact WHERE LastName LIKE 'G%' 
+        postgres=# SELECT COUNT(*) FROM contacts WHERE lastname LIKE 'G%';
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE lastname LIKE 'G%' 
          count 
         -------
              3
@@ -101,16 +101,16 @@ Installation
         INSERT 0 1
         postgres=# INSERT INTO example VALUES('agreen@uog.com', 'Blue');
         INSERT 0 1
-        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts."Email";
-        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
+        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts.email;
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact
          favorite_color 
         ----------------
          Red
          Green
          Blue
         (3 rows)
-        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts."Email" WHERE contacts."FirstName" = 'Rose';
-        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact WHERE FirstName = 'Rose' 
+        postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts.email WHERE contacts.firstname = 'Rose';
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE firstname = 'Rose' 
          favorite_color 
         ----------------
          Red
@@ -118,25 +118,25 @@ Installation
 
     Token refresh
 
-        postgres=# SELECT DISTINCT "Email" FROM contacts LIMIT 1;
-        NOTICE:  SOQL query is SELECT Email FROM Contact
+        postgres=# SELECT DISTINCT email FROM contacts LIMIT 1;
+        NOTICE:  SOQL query is SELECT email FROM Contact
         NOTICE:  Invalid token 00D50000000IZ3Z!AQ0AQBwEiMxpN5VhLER2PKlifISWxln8ztl2V0cw3BPUAf3IxiD6ZG8Ei5PBcJoCKHDZRmp8lGnFDPQl7kaYgKL73vHHkqbG - trying refresh
         NOTICE:  Logged in to https://login.salesforce.com as pat@superpat.com
-        NOTICE:  SOQL query is SELECT Email FROM Contact
-                 Email          
+        NOTICE:  SOQL query is SELECT email FROM Contact
+                 email          
         ------------------------
          jrogers@burlington.com
         (1 row)
 
     `EXPLAIN`
 
-        postgres=# explain analyze select * from contacts order by "LastName" asc limit 3;
-        NOTICE:  SOQL query is SELECT LastName,Email,FirstName FROM Contact
+        postgres=# EXPLAIN ANALYZE SELECT * FROM contacts ORDER BY lastname ASC LIMIT 3;
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact
                                                                    QUERY PLAN                                                           
         --------------------------------------------------------------------------------------------------------------------------------
          Limit  (cost=129263.11..129263.12 rows=3 width=96) (actual time=431.883..431.887 rows=3 loops=1)
            ->  Sort  (cost=129263.11..154263.11 rows=9999999 width=96) (actual time=431.880..431.880 rows=3 loops=1)
-                 Sort Key: "LastName"
+                 Sort Key: lastname
                  Sort Method: top-N heapsort  Memory: 17kB
                  ->  Foreign Scan on contacts  (cost=10.00..15.00 rows=9999999 width=96) (actual time=429.914..431.726 rows=69 loops=1)
                        Foreign multicorn: multicorn

@@ -10,6 +10,23 @@ import urllib2
 import json
 import pprint
 
+import collections
+
+class CaseInsensitiveDict(collections.Mapping):
+    def __init__(self, d):
+        self._d = d
+        self._s = dict((k.lower(), k) for k in d)
+    def __contains__(self, k):
+        return k.lower() in self._s
+    def __len__(self):
+        return len(self._s)
+    def __iter__(self):
+        return iter(self._s)
+    def __getitem__(self, k):
+        return self._d[self._s[k.lower()]]
+    def actual_key_case(self, k):
+        return self._s.get(k.lower())
+
 # ContentHandler implements a simple state machine to parse the records from 
 # the incoming JSON stream, adding them to the queue as maps of column name
 # to column value. We skip over any record properties that are not simple 
@@ -30,13 +47,14 @@ class ContentHandler(YajlContentHandler):
 
     _depth = 0
 
-    def __init__(self, queue):
+    def __init__(self, queue, column_map):
         self._queue = queue
+        self._column_map = column_map
 
     def handle_value(self, ctx, val):
         if self._state == ContentHandler.SEEN_KEY and self._depth == 0:
             self._state = ContentHandler.IN_RECORD
-            self._record[self._column] = val
+            self._record[self._column_map[self._column]] = val
 
     def yajl_null(self, ctx):
         self.handle_value(ctx, None)
@@ -89,8 +107,8 @@ class ContentHandler(YajlContentHandler):
             self._state = ContentHandler.IN_OBJECT
 
 # Parse the given stream to a queue
-def parseToQueue(stream, queue):
-    parser = YajlParser(ContentHandler(queue))
+def parseToQueue(stream, queue, column_map):
+    parser = YajlParser(ContentHandler(queue, column_map))
     parser.parse(stream)
     queue.put(None)
 
@@ -98,7 +116,7 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
 
     def __init__(self, options, columns):
         super(DatabaseDotComForeignDataWrapper, self).__init__(options, columns)
-        self.columns = columns
+        self.column_map = CaseInsensitiveDict(dict([(x, x) for x in columns]))
 
         self.obj_type = options.get('obj_type', None)
         if self.obj_type is None:
@@ -214,7 +232,7 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
                                 (token_url, e.reason[0], e.reason[1]), ERROR)
             else:
                 log_to_postgres('Unknown error %s' % e, ERROR)
-        t = Thread(target=parseToQueue, args=(stream, queue))        
+        t = Thread(target=parseToQueue, args=(stream, queue, self.column_map))        
         t.daemon = True
         t.start()
         item = queue.get()
