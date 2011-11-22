@@ -21,7 +21,6 @@ Installation
 2. [Install Multicorn](http://multicorn.org/#installation)
 3. [Build and install YAJL](http://lloyd.github.com/yajl/)
 4. [Build and install yajl-py](http://pykler.github.com/yajl-py/)
-
 5. Build the FDW module:
 
         $ cd Database.com-FDW-for-PostgreSQL
