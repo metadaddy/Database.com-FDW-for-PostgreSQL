@@ -2,3 +2,5 @@ build
 dist
 forcefdw.py~
 MANIFEST
+setup.cfg
+ForceFDW.egg-info
