@@ -1,6 +1,6 @@
 from multicorn import ForeignDataWrapper
 from multicorn.utils import log_to_postgres, ERROR, DEBUG
-from yajl import *
+from yajl import YajlContentHandler, YajlParser
 
 from Queue import Queue
 from threading import Thread
