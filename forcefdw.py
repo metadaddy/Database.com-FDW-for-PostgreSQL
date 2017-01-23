@@ -135,9 +135,12 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
             log_to_postgres('You MUST set the username',
             ERROR)
         self.password = options.get('password', None)
+
         if self.password is None:
             log_to_postgres('You MUST set the password',
             ERROR)
+
+        self.api_version = options.get('api_version', 'v23.0')
         self.login_server = options.get('login_server', 'https://login.salesforce.com')
 
         self.oauth = self.get_token()
@@ -190,7 +193,8 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         for qual in quals:
             operator = 'LIKE' if qual.operator == '~~' else qual.operator
             where += ' AND %s %s \'%s\'' % (
-                qual.field_name, operator, qual.value)
+                qual.field_name, operator, qual.value
+            )
         where = where[5:]
 
         query = 'SELECT '+cols+' FROM '+self.obj_type
@@ -203,8 +207,8 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
           'q': query.encode('utf8')
         })
 
-        query_url = (self.oauth['instance_url'] +
-                    '/services/data/v23.0/query?%s' % params)
+        query_url = (self.oauth['instance_url'] + '/services/data/' + self.api_version
+            + '/query?%s' % params)
 
         headers = {
           'Authorization': 'OAuth %s' % self.oauth['access_token']
