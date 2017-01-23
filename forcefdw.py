@@ -192,9 +192,14 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         parameters = []
         for qual in quals:
             operator = 'LIKE' if qual.operator == '~~' else qual.operator
-            where += ' AND %s %s \'%s\'' % (
-                qual.field_name, operator, qual.value
-            )
+            if qual.value is None:
+                where += ' AND %s %s NULL' % (
+                    qual.field_name, operator
+                )
+            else:
+                where += ' AND %s %s \'%s\'' % (
+                    qual.field_name, operator, qual.value
+                )
         where = where[5:]
 
         query = 'SELECT '+cols+' FROM '+self.obj_type

@@ -3,6 +3,7 @@ Database.com FDW for PostgreSQL
 
 This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. `Name LIKE 'P%'`) are passed to database.com to minimize the amount of data on the wire.
 
+* Version 0.0.7 fix a bug that prevented querying using null values
 * Version 0.0.6 allow to set api_version in the options
 * Version 0.0.5 fix utf8 encoding error, when querying with non ascii characters
 * Version 0.0.4 updates yajl-py refs to prevent YajlContentHandler is not defined issue with latest yajl and yajl-py
