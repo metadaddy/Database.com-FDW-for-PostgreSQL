@@ -3,6 +3,9 @@ Database.com FDW for PostgreSQL
 
 This Python module implements the `multicorn.ForeignDataWrapper` interface to allow you to create foreign tables in PostgreSQL 9.1+ that map to sobjects in database.com/Force.com. Column names and qualifiers (e.g. `Name LIKE 'P%'`) are passed to database.com to minimize the amount of data on the wire.
 
+* Version 0.0.7 fix a bug that prevented querying using null values
+* Version 0.0.6 allow to set api_version in the options
+* Version 0.0.5 fix utf8 encoding error, when querying with non ascii characters
 * Version 0.0.4 updates yajl-py refs to prevent YajlContentHandler is not defined issue with latest yajl and yajl-py
 * Version 0.0.3 removes the requirement for column names to be a case-sensitive match for the database.com field names.
 * Version 0.0.2 switched to using the yajl-py streaming JSON parser to avoid reading the entire response from database.com into memory at once.
@@ -40,8 +43,12 @@ Installation
         CREATE EXTENSION multicorn;
         CREATE SERVER multicorn_force FOREIGN DATA WRAPPER multicorn
         OPTIONS (
-            wrapper 'forcefdw.DatabaseDotComForeignDataWrapper'
+            wrapper 'forcefdw.DatabaseDotComForeignDataWrapper',
+            api_version 'v35.0',
+            login_server 'https://login.salesforce.com'
         );
+
+Default version is v23.0 and default login server is `https://login.salesforce.com`
 
 7. Create a foreign table. You can use any subset of fields from the sobject, and column/field name matching is not case-sensitive:
 
@@ -77,7 +84,7 @@ Installation
     `SELECT` a column with a condition
 
         postgres=# SELECT email FROM contacts WHERE lastname LIKE 'G%';
-        NOTICE:  SOQL query is SELECT lastname,email FROM Contact WHERE lastname LIKE 'G%' 
+        NOTICE:  SOQL query is SELECT lastname,email FROM Contact WHERE lastname LIKE 'G%'
                email       
         -------------------
          rose@edge.com
@@ -88,8 +95,8 @@ Installation
     Aggregator
 
         postgres=# SELECT COUNT(*) FROM contacts WHERE lastname LIKE 'G%';
-        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE lastname LIKE 'G%' 
-         count 
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE lastname LIKE 'G%'
+         count
         -------
              3
         (1 row)s
@@ -110,15 +117,15 @@ Installation
         INSERT 0 1
         postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts.email;
         NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact
-         favorite_color 
+         favorite_color
         ----------------
          Red
          Green
          Blue
         (3 rows)
         postgres=# SELECT favorite_color FROM example JOIN contacts ON example.email=contacts.email WHERE contacts.firstname = 'Rose';
-        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE firstname = 'Rose' 
-         favorite_color 
+        NOTICE:  SOQL query is SELECT lastname,email,firstname FROM Contact WHERE firstname = 'Rose'
+         favorite_color
         ----------------
          Red
         (1 row)

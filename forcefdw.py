@@ -27,9 +27,9 @@ class CaseInsensitiveDict(collections.Mapping):
     def actual_key_case(self, k):
         return self._s.get(k.lower())
 
-# ContentHandler implements a simple state machine to parse the records from 
+# ContentHandler implements a simple state machine to parse the records from
 # the incoming JSON stream, adding them to the queue as maps of column name
-# to column value. We skip over any record properties that are not simple 
+# to column value. We skip over any record properties that are not simple
 # values (e.g. attributes, which is an object containing the record's type
 # and URL)/
 class ContentHandler(YajlContentHandler):
@@ -39,7 +39,7 @@ class ContentHandler(YajlContentHandler):
     INIT = 0
     IN_OBJECT = 1
     SEEN_RECORDS = 2
-    IN_ARRAY = 3 
+    IN_ARRAY = 3
     IN_RECORD = 4
     SEEN_KEY = 5
 
@@ -135,9 +135,12 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
             log_to_postgres('You MUST set the username',
             ERROR)
         self.password = options.get('password', None)
+
         if self.password is None:
             log_to_postgres('You MUST set the password',
             ERROR)
+
+        self.api_version = options.get('api_version', 'v23.0')
         self.login_server = options.get('login_server', 'https://login.salesforce.com')
 
         self.oauth = self.get_token()
@@ -162,12 +165,12 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
             if hasattr(e, 'code'):
                 if e.code == 400:
                     log_to_postgres(
-                        'Bad Request', ERROR, 
+                        'Bad Request', ERROR,
                         'Check the client_id, client_secret, username and password')
                 else:
                     log_to_postgres('HTTP status %d' % e.code, ERROR)
             elif hasattr(e, 'reason'):
-                log_to_postgres('Error posting to URL %s: %d %s' % 
+                log_to_postgres('Error posting to URL %s: %d %s' %
                                 (token_url, e.reason[0], e.reason[1]), ERROR,
                                 'Check the login_server')
             else:
@@ -176,11 +179,11 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         oauth = json.loads(data)
         log_to_postgres('Logged in to %s as %s' % (self.login_server, self.username))
 
-        return oauth     
+        return oauth
 
     def execute(self, quals, columns, retry = True):
-        
-        cols = '';        
+
+        cols = '';
         for column_name in list(columns):
             cols += ',%s' % column_name
         cols = cols[1:]
@@ -189,22 +192,28 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         parameters = []
         for qual in quals:
             operator = 'LIKE' if qual.operator == '~~' else qual.operator
-            where += ' AND %s %s \'%s\'' % (
-                qual.field_name, operator, qual.value)
+            if qual.value is None:
+                where += ' AND %s %s NULL' % (
+                    qual.field_name, operator
+                )
+            else:
+                where += ' AND %s %s \'%s\'' % (
+                    qual.field_name, operator, qual.value
+                )
         where = where[5:]
 
         query = 'SELECT '+cols+' FROM '+self.obj_type
         if len(where) > 0:
             query += ' WHERE %s ' % where
 
-        log_to_postgres('SOQL query is %s' % query) 
+        log_to_postgres('SOQL query is %s' % query)
 
         params = urllib.urlencode({
-          'q': query
+          'q': query.encode('utf8')
         })
 
-        query_url = (self.oauth['instance_url'] + 
-                    '/services/data/v23.0/query?%s' % params)
+        query_url = (self.oauth['instance_url'] + '/services/data/' + self.api_version
+            + '/query?%s' % params)
 
         headers = {
           'Authorization': 'OAuth %s' % self.oauth['access_token']
@@ -219,8 +228,8 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
         except urllib2.URLError, e:
             if hasattr(e, 'code'):
                 if e.code == 401 and retry:
-                    log_to_postgres('Invalid token %s - trying refresh' % 
-                                    self.oauth['access_token']) 
+                    log_to_postgres('Invalid token %s - trying refresh' %
+                                    self.oauth['access_token'])
                     self.oauth = self.get_token()
                     for line in self.execute(quals, columns, False):
                         yield line
@@ -228,11 +237,11 @@ class DatabaseDotComForeignDataWrapper(ForeignDataWrapper):
                 else:
                     log_to_postgres('HTTP status %d' % e.code, ERROR)
             elif hasattr(e, 'reason'):
-                log_to_postgres('Error posting to URL %s: %d %s' % 
+                log_to_postgres('Error posting to URL %s: %d %s' %
                                 (token_url, e.reason[0], e.reason[1]), ERROR)
             else:
                 log_to_postgres('Unknown error %s' % e, ERROR)
-        t = Thread(target=parseToQueue, args=(stream, queue, self.column_map))        
+        t = Thread(target=parseToQueue, args=(stream, queue, self.column_map))
         t.daemon = True
         t.start()
         item = queue.get()
